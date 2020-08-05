@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="styles.css"/>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="custom-question.js"></script>
+</head>
+<body>
+	<div id="text-highlighter-settings">
+	
+		<h3>Scale Colors</h3>
+		<p>
+			Select colors for your scale items:<br><input value="#00FF00" type="color" id="colorSelector"> <button
+				id="addColor">Add</button>
+			<span id="color-error">You have already selected this color.</span>
+		</p>
+		<div id="selectedColors"></div>
+		<textarea id="colorCodes"></textarea>
+	
+	</div>
+<script>
+
+	function getContrast(hexcolor) {
+		
+		// If a leading # is provided, remove it
+		if (hexcolor.slice(0, 1) === '#') {
+			hexcolor = hexcolor.slice(1);
+		}
+
+		// If a three-character hexcode, make six-character
+		if (hexcolor.length === 3) {
+			hexcolor = hexcolor.split('').map(function (hex) {
+				return hex + hex;
+			}).join('');
+		}
+
+		// Convert to RGB value
+		var r = parseInt(hexcolor.substr(0, 2), 16);
+		var g = parseInt(hexcolor.substr(2, 2), 16);
+		var b = parseInt(hexcolor.substr(4, 2), 16);
+
+		// Get YIQ ratio
+		var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+
+		// Check contrast
+		return (yiq >= 128) ? '#000000' : '#ffffff';
+
+	}
+
+	function setInputValue(settings) {
+		document.getElementById("colorCodes").value = settings.scaleColors;
+		renderColors();
+	}	
+
+	function saveChanges() {
+		var settings = { 
+			scaleColors: $("#colorCodes").val()
+		};
+		var hasError = false;// inputElement.value === '';
+		customQuestion.saveChanges(settings, hasError);
+	}
+
+	customQuestion.onSettingsReceived = setInputValue;
+
+	function addColor() {
+
+		var color = $("#colorSelector").val();
+		var colorArray = $("#colorCodes").val() != "" ? $("#colorCodes").val().split(",") : [];
+		//check if color has already been selected
+		if(colorArray.indexOf(color) > -1){
+			$("#color-error").fadeIn();
+			setTimeout(function() {
+				$("#color-error").fadeOut();
+			}, 2000)
+		} else {
+			colorArray.push(color);
+			$("#colorCodes").val(colorArray.join(","));
+			renderColors();
+		}
+		saveChanges();
+	}
+
+	function deleteColor(color){
+		var colorArray = $("#colorCodes").val() != "" ? $("#colorCodes").val().split(",") : [];
+		var index = colorArray.indexOf(color);
+		if(index > -1){
+			colorArray.splice(index,1);
+		}
+		$("#colorCodes").val(colorArray.join(","));
+		saveChanges();
+		renderColors();
+	}
+	function renderColors(){
+		var colorArray = $("#colorCodes").val() != "" ? $("#colorCodes").val().split(",") : [];
+		var colorBlocks = colorArray.map(function(item){
+			return '<span class="selected-color" data-id="'+ item +'" style="background-color: '+ item +';"><span style="color: '+ getContrast(item) +';">'+ item +'</span><b data-id="'+ item +'";>x</b></span>';
+		});
+		$("#selectedColors").html(colorBlocks.join(""));
+	}
+
+	$(document).on("click",".selected-color b",function(){
+		deleteColor($(this).attr("data-id"));
+	});
+
+	$(document).on("click","#addColor",function(){
+		addColor();
+	});
+	$(document).ready(function(){
+		renderColors();
+	});
+
+</script>
+</body>
+</html>
