@@ -1,13 +1,5 @@
-/* global register */
-register(function (question, customQuestionSettings, questionViewSettings) {
-    new TextHighlighterQuestion({
-        "question": question,
-        "scaleColors": customQuestionSettings.scaleColors
-    });
-});
-
 class TextHighlighterQuestion {
-    
+
     constructor(obj) {
         // ---- options ----
         //required
@@ -795,3 +787,19 @@ class TextHighlighterQuestion {
 
 
 }
+
+(function () {
+    console.log("Running CQ dev mode");
+
+    const question = Confirmit.page.questions[0];
+    const questionSettings = { scaleColors: "'#040404', '#f8f8f8'" };
+    const viewSettings = {};
+
+    /* original run start */
+    new TextHighlighterQuestion({
+        "question": question,
+        "scaleColors": questionSettings.scaleColors
+    });
+    /* original run end */
+})();
+

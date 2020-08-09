@@ -2,112 +2,153 @@
 <html>
 <head>
 	<link rel="stylesheet" href="styles.css"/>
+	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,300;0,400;1,300;1,400;1,600&display=swap" rel="stylesheet">
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <script src="custom-question.js"></script>
+	<script src="custom-question.js"></script>
+<!--	<script src="custom-settings.js"></script>-->
 </head>
 <body>
-	<div id="text-highlighter-settings">
-	
-		<h3>Scale Colors</h3>
-		<p>
-			Select colors for your scale items:<br><input value="#00FF00" type="color" id="colorSelector"> <button
-				id="addColor">Add</button>
-			<span id="color-error">You have already selected this color.</span>
-		</p>
-		<div id="selectedColors"></div>
-		<textarea id="colorCodes"></textarea>
-	
+<div id="text-highlighter-settings">
+	<div class="settings-title">Highlighter Type</div>
+	<div class="settings-group">
+		<div class="setting-text">Please, select type of your text highlighter:</div>
+		<input type="radio" id="highlighter-option"
+			   class="highlighter-type" name="highlighter-type" value="highlighter">
+		<label for="highlighter-option">Highlighter</label>
+
+		<input type="radio" id="selector-option"
+			   class="highlighter-type" name="highlighter-type" value="selector">
+		<label for="selector-option">Selector</label>
 	</div>
+	<div class="settings-title">Scale Colors</div>
+	<div class="settings-group">
+		<div class="setting-text">How many scales do you have?</div>
+		<input id="scale-number" type="number"  min="1">
+		<label for="scale-number">scales</label>
+
+		<div class="scales-color-wrapper">
+			<div class="setting-text">Select colors for your scale items:</div>
+			<ul id="scale-color-list"></ul>
+		</div>
+		<textarea id="colorCodes"></textarea>
+	</div>
+</div>
+
 <script>
-
-	function getContrast(hexcolor) {
-		
-		// If a leading # is provided, remove it
-		if (hexcolor.slice(0, 1) === '#') {
-			hexcolor = hexcolor.slice(1);
-		}
-
-		// If a three-character hexcode, make six-character
-		if (hexcolor.length === 3) {
-			hexcolor = hexcolor.split('').map(function (hex) {
-				return hex + hex;
-			}).join('');
-		}
-
-		// Convert to RGB value
-		var r = parseInt(hexcolor.substr(0, 2), 16);
-		var g = parseInt(hexcolor.substr(2, 2), 16);
-		var b = parseInt(hexcolor.substr(4, 2), 16);
-
-		// Get YIQ ratio
-		var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-
-		// Check contrast
-		return (yiq >= 128) ? '#000000' : '#ffffff';
-
-	}
+	customQuestion.onSettingsReceived = setInputValue;
 
 	function setInputValue(settings) {
-		document.getElementById("colorCodes").value = settings.scaleColors;
-		renderColors();
-	}	
+		$("#colorCodes").text(settings.scaleColors);
+		$("#scale-number").val(settings.scaleColors.split(',').length);
+		if (settings.highlighterType=='selector')
+			$("#selector-option").prop('checked', true);
+		else $("#highlighter-option").prop('checked', true);
+
+		renderScaleColorsList();
+	}
+
+	function renderScaleColorsList() {
+		const scaleNumber = $("#scale-number").val();
+		let colors = [];
+		let htmlList = [];
+		for (let i = 0; i < scaleNumber; i++) {
+			let currentColor = getCurrentColor(i);
+			colors.push(currentColor);
+			let scaleIndex = i+1;
+			let liOption =
+					'<li class="scale-color-option"><label class="scale-color-label" for="scale-color-' +
+					scaleIndex +
+					'"> Scale ' +
+					scaleIndex +
+					' </label><input class="color-picker" id="scale-color-' +
+					scaleIndex +
+					'" value="' +
+					currentColor +
+					'" type="color"></li>';
+
+			htmlList.push(liOption);
+		}
+		$("#scale-color-list").html(htmlList.join(''));
+		updateColorArray(colors);
+		subscribeInputColors();
+	}
+
+	function getCurrentColor(index) {
+		const colors =
+				$("#colorCodes").val() != "" ? $("#colorCodes").val().split(",") : [];
+		if (colors.length > index) {
+			return colors[index];
+		} else {
+			let color = getRandomColor();
+			while (colors.indexOf(color) > 0) {
+				color = getRandomColor();
+			}
+			return color;
+		}
+	}
+
+	function updateColorArray(colors) {
+		$("#colorCodes").val(colors.join(","));
+	}
+
+	function getRandomColor() {
+		let r = Math.floor(Math.random() * 256);
+		let g = Math.floor(Math.random() * 256);
+		let b = Math.floor(Math.random() * 256);
+		let color ="#" + r.toString(16) + g.toString(16) + b.toString(16);
+		while (color.length<7) {
+			color += '0';
+		}
+		return color;
+	}
+
 
 	function saveChanges() {
-		var settings = { 
-			scaleColors: $("#colorCodes").val()
+		const settings = {
+			scaleColors: $("#colorCodes").val(),
+			highlighterType: getHighlighterType()
 		};
-		var hasError = false;// inputElement.value === '';
+		const hasError = false; // inputElement.value === '';
 		customQuestion.saveChanges(settings, hasError);
 	}
 
-	customQuestion.onSettingsReceived = setInputValue;
-
-	function addColor() {
-
-		var color = $("#colorSelector").val();
-		var colorArray = $("#colorCodes").val() != "" ? $("#colorCodes").val().split(",") : [];
-		//check if color has already been selected
-		if(colorArray.indexOf(color) > -1){
-			$("#color-error").fadeIn();
-			setTimeout(function() {
-				$("#color-error").fadeOut();
-			}, 2000)
-		} else {
-			colorArray.push(color);
-			$("#colorCodes").val(colorArray.join(","));
-			renderColors();
+	function getHighlighterType() {
+		const hTypes = $('input[name ="highlighter-type"]');
+		for (let i = 0; i < hTypes.length; i++) {
+			if (hTypes[i].checked) return hTypes[i].value;
 		}
-		saveChanges();
+	}
+	// function getHighlighterType() {
+	// 	return $('input[name ="highlighter-type"]:checked').value;
+	// }
+
+	function changeColorInArray(index, newColor){
+		let colors = $("#colorCodes").val().split(',');
+		colors[index] = newColor;
+		$("#colorCodes").val(colors.join(','));
 	}
 
-	function deleteColor(color){
-		var colorArray = $("#colorCodes").val() != "" ? $("#colorCodes").val().split(",") : [];
-		var index = colorArray.indexOf(color);
-		if(index > -1){
-			colorArray.splice(index,1);
-		}
-		$("#colorCodes").val(colorArray.join(","));
+	// $(document).ready(function () {
+	// 	console.log('document is ready');
+	// 	renderScaleColorsList();
+	// });
+
+	$(".highlighter-type").click(function () {
 		saveChanges();
-		renderColors();
-	}
-	function renderColors(){
-		var colorArray = $("#colorCodes").val() != "" ? $("#colorCodes").val().split(",") : [];
-		var colorBlocks = colorArray.map(function(item){
-			return '<span class="selected-color" data-id="'+ item +'" style="background-color: '+ item +';"><span style="color: '+ getContrast(item) +';">'+ item +'</span><b data-id="'+ item +'";>x</b></span>';
+	});
+
+	$("#scale-number").change(function () {
+		renderScaleColorsList($("#scale-number").val());
+		saveChanges();
+	});
+
+	function subscribeInputColors(){
+		$(".color-picker").change(function(){
+			const index = this.id.slice(12);
+			changeColorInArray(index-1, this.value);
+			saveChanges();
 		});
-		$("#selectedColors").html(colorBlocks.join(""));
 	}
-
-	$(document).on("click",".selected-color b",function(){
-		deleteColor($(this).attr("data-id"));
-	});
-
-	$(document).on("click","#addColor",function(){
-		addColor();
-	});
-	$(document).ready(function(){
-		renderColors();
-	});
 
 </script>
 </body>
